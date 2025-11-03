@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { searchMovies, discoverMovies } from './api/movieDB'
+import { searchMovies, discoverMovies, getMovieDetails, getMovieCredits } from './api/movieDB'
 import './App.css'
 
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500'
 
 /* eslint-disable react/prop-types */
-function MovieCard({ movie, isWatched, isFavorite, isWantToWatch, onToggleWatched, onToggleFavorite, onToggleWantToWatch }) {
+function MovieCard({ movie, isWatched, isFavorite, isWantToWatch, onToggleWatched, onToggleFavorite, onToggleWantToWatch, onMovieClick }) {
   const posterUrl = movie.poster_path 
     ? `${IMAGE_BASE_URL}${movie.poster_path}`
     : 'https://via.placeholder.com/500x750?text=No+Image'
@@ -19,8 +19,17 @@ function MovieCard({ movie, isWatched, isFavorite, isWantToWatch, onToggleWatche
     action()
   }
 
+  const handleCardClick = () => {
+    if (onMovieClick) {
+      onMovieClick(movie)
+    }
+  }
+
   return (
-    <div className="group relative bg-gray-800 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-105 cursor-pointer border-2 border-transparent">
+    <div 
+      onClick={handleCardClick}
+      className="group relative bg-gray-800 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-105 cursor-pointer border-2 border-transparent"
+    >
       <div className="relative overflow-hidden">
         <img
           src={posterUrl}
@@ -30,9 +39,9 @@ function MovieCard({ movie, isWatched, isFavorite, isWantToWatch, onToggleWatche
             e.target.src = 'https://via.placeholder.com/500x750?text=No+Image'
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300"></div>
         
-        <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+        <div className="absolute top-2 left-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 z-10">
           <button
             onClick={(e) => handleButtonClick(e, onToggleWatched)}
             className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
@@ -90,6 +99,190 @@ function MovieCard({ movie, isWatched, isFavorite, isWantToWatch, onToggleWatche
 }
 /* eslint-enable react/prop-types */
 
+/* eslint-disable react/prop-types */
+function MovieModal({ 
+  movie, 
+  details, 
+  credits, 
+  loading, 
+  isWatched, 
+  isFavorite, 
+  isWantToWatch,
+  onClose,
+  onToggleWatched,
+  onToggleFavorite,
+  onToggleWantToWatch
+}) {
+  if (!movie && !loading) return null
+
+  const posterUrl = details?.poster_path 
+    ? `${IMAGE_BASE_URL}${details.poster_path}`
+    : movie?.poster_path 
+      ? `${IMAGE_BASE_URL}${movie.poster_path}`
+      : 'https://via.placeholder.com/500x750?text=No+Image'
+
+  const backdropUrl = details?.backdrop_path
+    ? `https://image.tmdb.org/t/p/w1280${details.backdrop_path}`
+    : null
+
+  const director = credits?.crew?.find(person => person.job === 'Director')?.name || 'Unknown'
+  const actors = credits?.cast?.slice(0, 10) || []
+  const genres = details?.genres?.map(g => g.name) || movie?.genre_names || []
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+      <div 
+        className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-lg shadow-2xl"
+        style={{ backgroundColor: '#1d242a' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {backdropUrl && (
+          <div className="relative h-40 sm:h-48 md:h-64 lg:h-80 w-full">
+            <img
+              src={backdropUrl}
+              alt={details?.title || movie?.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1d242a]" />
+          </div>
+        )}
+        
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors flex items-center justify-center text-lg sm:text-xl font-bold"
+        >
+          ✖
+        </button>
+
+        <div className="p-4 sm:p-6 md:p-8">
+          {loading ? (
+            <div className="flex justify-center items-center py-12 sm:py-20">
+              <div className="text-white text-lg sm:text-xl">Loading...</div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col md:flex-row gap-4 sm:gap-6 mb-4 sm:mb-6">
+                <img
+                  src={posterUrl}
+                  alt={details?.title || movie?.title}
+                  className="w-32 sm:w-40 md:w-48 lg:w-64 h-auto rounded-lg object-cover mx-auto md:mx-0 flex-shrink-0"
+                  onError={(e) => {
+                    e.target.src = 'https://via.placeholder.com/500x750?text=No+Image'
+                  }}
+                />
+                
+                <div className="flex-1">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3">
+                    {details?.title || movie?.title}
+                  </h2>
+                  
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    {details?.release_date && (
+                      <span className="text-gray-400 text-sm sm:text-base">
+                        {new Date(details.release_date).getFullYear()}
+                      </span>
+                    )}
+                    {details?.runtime && (
+                      <span className="text-gray-400 text-sm sm:text-base">
+                        {details.runtime} min
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="bg-blue-500 text-white px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-semibold">
+                        {(details?.vote_average || movie?.vote_average || 0).toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
+                    {genres.map((genre, index) => (
+                      <span
+                        key={index}
+                        className="px-2 sm:px-3 py-1 bg-gray-700 rounded-full text-xs sm:text-sm text-gray-300"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <button
+                      onClick={() => onToggleWatched(details || movie)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+                        isWatched
+                          ? 'bg-green-500 text-white hover:bg-green-600'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {isWatched ? '✓ Watched' : 'Mark as Watched'}
+                    </button>
+                    <button
+                      onClick={() => onToggleFavorite(details || movie)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+                        isFavorite
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {isFavorite ? '♥ Favorite' : 'Add to Favorites'}
+                    </button>
+                    <button
+                      onClick={() => onToggleWantToWatch(details || movie)}
+                      className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+                        isWantToWatch
+                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {isWantToWatch ? '+ Want to Watch' : 'Want to Watch'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 sm:space-y-6">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Description</h3>
+                  <p className="text-gray-300 leading-relaxed text-sm sm:text-base">
+                    {details?.overview || movie?.overview || 'No description available'}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Director</h3>
+                  <p className="text-gray-300 text-sm sm:text-base">{director}</p>
+                </div>
+
+                {actors.length > 0 && (
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 sm:mb-3">Actors</h3>
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
+                      {actors.map((actor) => (
+                        <div
+                          key={actor.id}
+                          className="bg-gray-800 rounded-lg p-2 sm:p-3"
+                        >
+                          <p className="text-white text-sm sm:text-base font-medium">{actor.name}</p>
+                          <p className="text-gray-400 text-xs sm:text-sm">{actor.character}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+/* eslint-enable react/prop-types */
+
 const genreMap = {
   'action': 28,
   'comedy': 35,
@@ -118,6 +311,10 @@ function App() {
     year: '',
     minRating: ''
   })
+  const [selectedMovie, setSelectedMovie] = useState(null)
+  const [movieDetails, setMovieDetails] = useState(null)
+  const [movieCredits, setMovieCredits] = useState(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
 
   const tabs = [
     { id: 'home', label: 'Home' },
@@ -253,6 +450,32 @@ function App() {
   const isMovieFavorite = (movieId) => favoriteMovies.some(m => m.id === movieId)
   const isMovieWantToWatch = (movieId) => wantToWatchMovies.some(m => m.id === movieId)
 
+  const handleMovieClick = async (movie) => {
+    setSelectedMovie(movie)
+    setLoadingDetails(true)
+    setMovieDetails(null)
+    setMovieCredits(null)
+    
+    try {
+      const [details, credits] = await Promise.all([
+        getMovieDetails(movie.id),
+        getMovieCredits(movie.id)
+      ])
+      setMovieDetails(details)
+      setMovieCredits(credits)
+    } catch (error) {
+      console.error('Error fetching movie details:', error)
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
+
+  const closeMovieModal = () => {
+    setSelectedMovie(null)
+    setMovieDetails(null)
+    setMovieCredits(null)
+  }
+
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage)
@@ -377,19 +600,21 @@ function App() {
       </header>
 
       <div className="flex flex-col lg:flex-row">
-        <aside className="w-full lg:w-[30%] p-4 md:p-6">
+        <aside className="w-full lg:w-[350px] lg:flex-shrink-0 lg:flex-grow-0 p-4 md:p-6">
           <div className="rounded-lg p-4 md:p-6 space-y-6" style={{ backgroundColor: '#1d242a' }}>
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg md:text-xl font-semibold text-white min-h-[30px]">Sorting</h2>
-                {(sortBy.popularity || sortBy.rating || sortBy.releaseDate || filters.genre || filters.year || filters.minRating || searchQuery) && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 border border-red-500/50 rounded-lg hover:bg-red-500/10 transition-colors"
-                  >
-                    Clear All
-                  </button>
-                )}
+              <div className="flex items-center justify-between mb-4 min-h-[30px]">
+                <h2 className="text-lg md:text-xl font-semibold text-white">Sorting</h2>
+                <button
+                  onClick={clearAllFilters}
+                  className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-all ${
+                    (sortBy.popularity || sortBy.rating || sortBy.releaseDate || filters.genre || filters.year || filters.minRating || searchQuery)
+                      ? 'text-red-400 hover:text-red-300 border-red-500/50 hover:bg-red-500/10 opacity-100 visible'
+                      : 'opacity-0 invisible pointer-events-none'
+                  }`}
+                >
+                  Clear All
+                </button>
               </div>
               
               <div className="space-y-2">
@@ -406,9 +631,9 @@ function App() {
                   }}
                 >
                   <span className="font-medium">Popularity</span>
-                  {getSortIcon('popularity') && (
-                    <span className="text-blue-400 text-lg font-bold">{getSortIcon('popularity')}</span>
-                  )}
+                  <span className="text-blue-400 text-lg font-bold min-w-[20px] text-center">
+                    {getSortIcon('popularity') || ''}
+                  </span>
                 </button>
                 <button 
                   onClick={() => handleSort('rating')}
@@ -423,9 +648,9 @@ function App() {
                   }}
                 >
                   <span className="font-medium">Rating</span>
-                  {getSortIcon('rating') && (
-                    <span className="text-blue-400 text-lg font-bold">{getSortIcon('rating')}</span>
-                  )}
+                  <span className="text-blue-400 text-lg font-bold min-w-[20px] text-center">
+                    {getSortIcon('rating') || ''}
+                  </span>
                 </button>
                 <button 
                   onClick={() => handleSort('releaseDate')}
@@ -440,9 +665,9 @@ function App() {
                   }}
                 >
                   <span className="font-medium">Release Date</span>
-                  {getSortIcon('releaseDate') && (
-                    <span className="text-blue-400 text-lg font-bold">{getSortIcon('releaseDate')}</span>
-                  )}
+                  <span className="text-blue-400 text-lg font-bold min-w-[20px] text-center">
+                    {getSortIcon('releaseDate') || ''}
+                  </span>
                 </button>
               </div>
             </div>
@@ -511,7 +736,7 @@ function App() {
           </div>
         </aside>
 
-        <main className="w-full lg:w-[70%] p-4 md:p-6">
+        <main className="w-full lg:flex-1 lg:min-w-0 p-4 md:p-6">
           <div className="mb-6 border-b border-gray-700 overflow-x-auto">
             <nav className="flex space-x-1 min-w-max">
               {tabs.map((tab) => (
@@ -553,6 +778,7 @@ function App() {
                           onToggleWatched={() => toggleWatched(movie)}
                           onToggleFavorite={() => toggleFavorite(movie)}
                           onToggleWantToWatch={() => toggleWantToWatch(movie)}
+                          onMovieClick={handleMovieClick}
                         />
                       ))}
                     </div>
@@ -689,6 +915,7 @@ function App() {
                           onToggleWatched={() => toggleWatched(movie)}
                           onToggleFavorite={() => toggleFavorite(movie)}
                           onToggleWantToWatch={() => toggleWantToWatch(movie)}
+                          onMovieClick={handleMovieClick}
                         />
                       ))}
                     </div>
@@ -728,6 +955,7 @@ function App() {
                           onToggleWatched={() => toggleWatched(movie)}
                           onToggleFavorite={() => toggleFavorite(movie)}
                           onToggleWantToWatch={() => toggleWantToWatch(movie)}
+                          onMovieClick={handleMovieClick}
                         />
                       ))}
                     </div>
@@ -767,6 +995,7 @@ function App() {
                           onToggleWatched={() => toggleWatched(movie)}
                           onToggleFavorite={() => toggleFavorite(movie)}
                           onToggleWantToWatch={() => toggleWantToWatch(movie)}
+                          onMovieClick={handleMovieClick}
                         />
                       ))}
                     </div>
@@ -785,6 +1014,22 @@ function App() {
           </div>
         </main>
       </div>
+
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          details={movieDetails}
+          credits={movieCredits}
+          loading={loadingDetails}
+          isWatched={isMovieWatched(selectedMovie.id)}
+          isFavorite={isMovieFavorite(selectedMovie.id)}
+          isWantToWatch={isMovieWantToWatch(selectedMovie.id)}
+          onClose={closeMovieModal}
+          onToggleWatched={toggleWatched}
+          onToggleFavorite={toggleFavorite}
+          onToggleWantToWatch={toggleWantToWatch}
+        />
+      )}
     </div>
   )
 }
