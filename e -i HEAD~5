@@ -1,0 +1,10 @@
+[33m59fa5c4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m test
+[33m1375ddb[m test
+[33m1ef11d5[m test
+[33m440b7fa[m test
+[33m5c10a68[m test
+[33m4d9e81d[m  .env add to .gitignore
+[33m1ed0018[m feat: added create button, create form, my movies tab. ability to edit and delete your movies.
+[33m846a604[m feat: added popup for films, always visible adding to tabs buttons
+[33mfde3d87[m feat: sorting for all tabs. added pages scrolling. added buttons for adding to watched, favorites, wantt to watch
+[33mc135fc7[m start
